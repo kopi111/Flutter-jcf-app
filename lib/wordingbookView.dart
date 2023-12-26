@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class WordingBookPage extends StatefulWidget {
   const WordingBookPage({super.key});
@@ -11,17 +12,38 @@ class WordingBookPage extends StatefulWidget {
 class _WordingBookPageState extends State<WordingBookPage> {
   TextEditingController searchController = TextEditingController();
   List<WordingBook> wordingBooks = [];
-  List<WordingBook> filteredWordingBooks = []; // List to store filtered WordingBook objects
+  List<WordingBook> filteredWordingBooks =
+      []; // List to store filtered WordingBook objects
 
   Future<void> loadWordingBooks() async {
-    String jsonData = await DefaultAssetBundle.of(context).loadString('assets/wordingBook.json');
-    Map<String, dynamic> jsonMap = json.decode(jsonData);
-    List<dynamic> offencesList = jsonMap['wordingDook'];
+    try {
+      final response = await http.get(Uri.parse(
+          'https://raw.githubusercontent.com/kopi111/JsonApi/main/wordingBook.JSON'));
 
-    setState(() {
-      wordingBooks = offencesList.map((e) => WordingBook.fromJson(e)).toList();
-      filteredWordingBooks = wordingBooks; // Initialize filtered list
-    });
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+
+        if (jsonData.containsKey('wordingBook') &&
+            jsonData['wordingBook'] != null) {
+          List<dynamic> wordingBookList = jsonData['wordingBook'];
+
+          setState(() {
+            wordingBooks =
+                wordingBookList.map((e) => WordingBook.fromJson(e)).toList();
+            filteredWordingBooks = wordingBooks; // Initialize filtered list
+          });
+        } else {
+          throw Exception(
+              'The key "wordingBook" is missing or null in the JSON data.');
+        }
+      } else {
+        throw Exception(
+            'Failed to fetch data from API. Status code: ${response.statusCode}');
+      }
+    } catch (error) {
+      print(error);
+      // Consider displaying an error message to the user
+    }
   }
 
   @override
